@@ -1,0 +1,186 @@
+File: models.py
+from django.contrib.auth.models import AbstractUser, Group, Permission, User
+from django.db import models
+from django.contrib.auth.models import Permission
+from django.contrib.contenttypes.models import ContentType
+from django.contrib.auth.models import Permission
+from django.contrib.contenttypes.models import ContentType
+from django.contrib.auth.models import Permission
+
+# Определение моделей
+
+class Country(models.Model):
+    name = models.CharField(max_length=255)
+    
+class Agency(models.Model):
+    name = models.CharField(max_length=255)
+
+class Reservation(models.Model):
+    users = models.ForeignKey(User, on_delete=models.CASCADE)
+    tour = models.ForeignKey('Tour', on_delete=models.CASCADE)
+    is_confirmed = models.BooleanField(default=False)
+
+class Tour(models.Model):
+    name = models.CharField(max_length=255)
+    agency = models.ForeignKey(Agency, on_delete=models.CASCADE)
+    country = models.ForeignKey(Country, on_delete=models.CASCADE, null=True)
+    description = models.TextField()
+    start_date = models.DateField()
+    end_date = models.DateField()
+    payment_conditions = models.TextField()
+    reservations = models.ManyToManyField(Reservation, related_name='tour_reservations', blank=True)
+
+class Review(models.Model):
+    users = models.ForeignKey(User, on_delete=models.CASCADE)
+    tour = models.ForeignKey(Tour, on_delete=models.CASCADE)
+    text = models.TextField()
+    rating = models.IntegerField()
+    created_at = models.DateTimeField(auto_now_add=True)
+
+from django.db.models.signals import post_save
+from django.dispatch import receiver
+from django.contrib.auth.models import Permission
+
+# Затем можно определить сигнал и добавить разрешения
+tour_content_type = ContentType.objects.get_for_model(Tour)  
+
+view_tour_permission, _ = Permission.objects.get_or_create(
+    codename='view_tour',
+    name='Can view Tour',
+    content_type=tour_content_type,
+)
+
+@receiver(post_save, sender=User)
+def add_view_tour_permission(sender, instance, created, **kwargs):
+    if created:
+        instance.user_permissions.add(view_tour_permission)
+
+class Users(AbstractUser):
+    groups = models.ManyToManyField(Group, related_name='custom_user_set')
+    user_permissions = models.ManyToManyField(Permission, related_name='custom_user_set')
+File: settings.py
+File: admin.py
+from django.contrib import admin
+from django.contrib.auth.admin import UserAdmin
+from .forms import CustomUserChangeForm, CustomUserCreationForm
+from .models import Agency, Tour, Users, Reservation, Review, Country
+
+admin.site.register(Agency)
+admin.site.register(Tour)
+
+class CustomUserAdmin(UserAdmin):
+    form = CustomUserChangeForm
+    add_form = CustomUserCreationForm
+
+admin.site.register(Users, CustomUserAdmin)
+
+admin.site.register(Reservation)
+admin.site.register(Review)
+admin.site.register(Country)
+File: urls.py
+File: views.py
+from django.shortcuts import render, get_object_or_404
+from .models import Tour, Agency, Reservation, Review
+from django.shortcuts import render, redirect
+from django.contrib.auth import login
+from .forms import CustomUserCreationForm
+from .forms import ReservationForm
+from django.shortcuts import render
+from .models import Agency, Tour, User, Reservation, Review, Country
+
+
+def tour_reserve(request, pk):
+    return render(request, 'reserve_tour.html')
+
+
+
+def tour_list_view(request):
+    tours = Tour.objects.all()
+    if request.method == 'POST':
+        form = ReservationForm(request.POST)
+        if form.is_valid():
+            reservation = form.save(commit=False)
+            reservation.users = request.user
+            reservation.save()
+            tour = form.cleaned_data['tour']
+            tour.reservations.add(reservation)
+    else:
+        form = ReservationForm()
+    return render(request, 'tour_list.html', {'tours': tours, 'form': form})
+
+
+def tour_detail_view(request, pk):
+    tour = get_object_or_404(Tour, pk=pk)
+    return render(request, 'tour_detail.html', {'tour': tour})
+
+def agency_detail_view(request, pk):
+    agency = get_object_or_404(Agency, pk=pk)
+    return render(request, 'agency_detail.html', {'agency': agency})
+
+def reservation_detail_view(request, pk):
+    reservation = get_object_or_404(Reservation, pk=pk)
+    return render(request, 'reservation_detail.html', {'reservation': reservation})
+
+
+def review_detail_view(request, pk):
+    review = get_object_or_404(Review, pk=pk)
+    return render(request, 'review_detail.html', {'review': review})
+
+def tour_list_view(request):
+    countries = Country.objects.all()
+    context = {
+        'countries': countries,
+    }
+    return render(request, 'tour_list.html', context)
+
+def sold_tours_view(request, country_id):
+    country = Country.objects.get(pk=country_id)
+    sold_tours = Tour.objects.filter(country=country)
+    context = {
+        'country': country,
+        'sold_tours': sold_tours,
+    }
+    return render(request, 'sold_tours.html', context)
+
+
+def register_user(request):
+    if request.method == 'POST':
+        form = CustomUserCreationForm(request.POST)
+        if form.is_valid():
+            user = form.save()
+            login(request, user)
+            return redirect('tour_list')  # Перенаправляем пользователя на нужную страницу после регистрации
+    else:
+        form = CustomUserCreationForm()
+    return render(request, 'registration/register.html', {'form': form})
+
+def register_client(request):
+    if request.method == 'POST':
+        form = ClientRegistrationForm(request.POST)
+        if form.is_valid():
+            user = form.save()
+            login(request, user)  # Автоматически входит в систему после регистрации
+            return redirect('home')  # Перенаправление на главную страницу или другую страницу
+    else:
+        form = ClientRegistrationForm()
+    return render(request, 'registration/register_client.html', {'form': form})
+
+
+def add_review(request, pk):
+    tour = get_object_or_404(Tour, pk=pk)
+    
+    if request.method == 'POST':
+        form = ReviewForm(request.POST)
+        if form.is_valid():
+            review = form.save(commit=False)
+            review.tour = tour
+            review.users = request.user
+            review.save()
+            return redirect('tour_detail', pk=pk)
+    else:
+        form = ReviewForm()
+    
+    return render(request, 'add_review.html', {'form': form, 'tour': tour})
+
+
+    

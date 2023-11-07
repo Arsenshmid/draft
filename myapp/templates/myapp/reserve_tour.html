@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+
+{% block content %}
+  <h1>Бронирование тура</h1>
+  <form method="post">
+    {% csrf_token %}
+    {{ form.as_p }}
+    <button type="submit">Забронировать</button>
+  </form>
+  <a href="{% url 'tour_list' %}">Вернуться к списку туров</a>
+{% endblock %}

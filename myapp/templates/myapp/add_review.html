@@ -1,0 +1,14 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Добавить отзыв</title>
+</head>
+<body>
+    <h1>Добавить отзыв к туру "{{ tour.name }}"</h1>
+    <form method="post">
+        {% csrf_token %}
+        {{ form.as_p }}
+        <button type="submit">Сохранить отзыв</button>
+    </form>
+</body>
+</html>

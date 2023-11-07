@@ -1,0 +1,9 @@
+{% extends "base.html" %}
+
+{% block content %}
+  <h1>Детали бронирования</h1>
+  <p>Номер бронирования: {{ reservation.pk }}</p>
+  <p>Тур: {{ reservation.tour.name }}</p>
+  <p>Подтверждено: {{ reservation.is_confirmed }}</p>
+  <a href="{% url 'tour_list' %}">Вернуться к списку туров</a>
+{% endblock %}

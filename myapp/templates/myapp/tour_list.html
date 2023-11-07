@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Список туров</title>
+</head>
+<body>
+    <h1>Список туров</h1>
+    <ul>
+        {% for tour in tours %}
+            <li>
+                <a href="{% url 'tour_detail' tour.pk %}">{{ tour.name }}</a>
+            </li>
+        {% endfor %}
+    </ul>
+</body>
+</html>

@@ -1,0 +1,14 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Проданные туры</title>
+</head>
+<body>
+    <h1>Проданные туры в стране {{ country.name }}:</h1>
+    <ul>
+        {% for tour in sold_tours %}
+            <li>{{ tour.name }} - {{ tour.description }}</li>
+        {% endfor %}
+    </ul>
+</body>
+</html>
